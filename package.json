@@ -1,0 +1,67 @@
+{
+  "name": "scriptboard",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "test": "node scripts/test-shared.mjs",
+    "postinstall": "node node_modules/electron/install.js && electron-rebuild -f -w node-pty",
+    "verify": "electron-vite build && node scripts/verify.mjs",
+    "dist": "electron-vite build && electron-builder --mac --arm64"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.1",
+    "@swc/core": "^1.13.5",
+    "@types/node": "^24.7.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "playwright": "^1.56.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "build": {
+    "appId": "app.scriptboard",
+    "productName": "MollyRun",
+    "electronDist": "node_modules/electron/dist",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "!src/**",
+      "!scripts/**",
+      "!release/**",
+      "!**/*.md",
+      "!tsconfig.json",
+      "!electron.vite.config.ts"
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-pty/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "identity": null,
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    }
+  }
+}

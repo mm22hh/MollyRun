@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="140" y1="40" x2="900" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34312a"/>
+      <stop offset="0.55" stop-color="#1c1b17"/>
+      <stop offset="1" stop-color="#10100e"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="210" y1="190" x2="720" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#efe6d6"/>
+    </linearGradient>
+    <linearGradient id="run" x1="560" y1="500" x2="900" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#46c784"/>
+      <stop offset="0.45" stop-color="#1f7a4d"/>
+      <stop offset="1" stop-color="#145538"/>
+    </linearGradient>
+    <filter id="lift" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#000000" flood-opacity="0.32"/>
+    </filter>
+    <filter id="run-lift" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#062214" flood-opacity="0.4"/>
+    </filter>
+    <mask id="command">
+      <rect x="248" y="380" width="392" height="40" rx="20" fill="#fff"/>
+    </mask>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g filter="url(#lift)">
+    <rect x="168" y="176" width="600" height="640" rx="88" fill="url(#paper)"/>
+    <rect x="170" y="178" width="596" height="636" rx="86" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="3"/>
+  </g>
+  <circle cx="268" cy="292" r="26" fill="#2f9e62"/>
+  <circle cx="268" cy="292" r="26" fill="none" stroke="#1f7a4d" stroke-opacity="0.25" stroke-width="4"/>
+  <rect x="320" y="274" width="210" height="36" rx="18" fill="#e4dac8"/>
+  <g mask="url(#command)">
+    <rect x="248" y="380" width="392" height="40" fill="#1d1b16"/>
+    <rect x="248" y="380" width="78" height="40" fill="#1f7a4d"/>
+  </g>
+  <rect x="248" y="452" width="318" height="40" rx="20" fill="#ddd2c0"/>
+  <rect x="248" y="524" width="246" height="40" rx="20" fill="#e7dfd0"/>
+  <g filter="url(#run-lift)">
+    <circle cx="724" cy="724" r="188" fill="url(#run)"/>
+    <circle cx="724" cy="724" r="188" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="6"/>
+    <path d="M668 632l0 184 168-92z" fill="#f6f1e6"/>
+  </g>
+</svg>
