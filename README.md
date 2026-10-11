@@ -4,7 +4,7 @@
 
 Run local Python scripts and shell commands from one Mac window. The files stay in your projects. MollyRun keeps a list, starts and stops them, and shows the output.
 
-**[Download 0.1.0 for Apple silicon](https://github.com/mm22hh/MollyRun/releases/download/v0.1.0/MollyRun-0.1.0-mac-arm64.zip)** · [All releases](https://github.com/mm22hh/MollyRun/releases)
+**[Download 0.1.1 for Apple silicon](https://github.com/mm22hh/MollyRun/releases/download/v0.1.1/MollyRun-0.1.1-mac-arm64.zip)** · [All releases](https://github.com/mm22hh/MollyRun/releases)
 
 Requires macOS on Apple silicon. This build is not code-signed. Unzip it, move `MollyRun.app` into Applications, then Control-click the app and choose Open the first time.
 
@@ -23,6 +23,7 @@ Closing a tab hides that terminal. It does not stop the script. If anything is s
 - Show only the scripts that are running
 - Reorder, edit, and delete entries
 - Use light, dark, or system appearance
+- Switch between Simplified Chinese and English. The first launch follows the Mac language
 
 A virtual environment uses that environment's Python, and its `bin` directory is placed first on `PATH`.
 

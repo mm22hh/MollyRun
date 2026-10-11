@@ -4,6 +4,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import os from 'os'
 import type { StageLayout } from '../shared/api'
+import { activeLocale, joinPhrases, resolveLocale, setActiveLocale, t, type LanguagePreference } from '../shared/i18n'
 import { expandHome, normalizeVenvPath, type ScriptInput, type ScriptStatus } from '../shared/model'
 import { Library } from './library'
 import { prepareScript, resolveInterpreter } from './python'
@@ -57,7 +58,10 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      additionalArguments: [`--scriptboard-theme=${nativeTheme.shouldUseDarkColors ? 'dark' : 'light'}`]
+      additionalArguments: [
+        `--scriptboard-theme=${nativeTheme.shouldUseDarkColors ? 'dark' : 'light'}`,
+        `--scriptboard-locale=${activeLocale()}`
+      ]
     }
   })
 
@@ -82,11 +86,11 @@ async function requestQuit(): Promise<void> {
     if (running.length > 0) {
       const { response } = await ask({
         type: 'question',
-        buttons: ['停掉并退出', '取消'],
+        buttons: [t('dialog.quitStop'), t('dialog.cancel')],
         defaultId: 0,
         cancelId: 1,
-        message: `还有 ${running.length} 个脚本在运行`,
-        detail: '退出会停止它们。'
+        message: running.length === 1 ? t('dialog.quitRunningOne') : t('dialog.quitRunningMany', { count: running.length }),
+        detail: t('dialog.quitDetail')
       })
       if (response !== 0) return
       await sessions.stopAll()
@@ -114,28 +118,30 @@ function registerIpc(): void {
   ipcMain.handle('scripts:save', (_event, input: ScriptInput) => {
     try {
       const id = input.id?.trim() || randomUUID()
-      if (input.id && !library.get(id)) return { ok: false, error: '找不到这个脚本' }
+      if (input.id && !library.get(id)) return { ok: false, error: t('error.notFound') }
       const script = prepareScript(input, id)
       library.upsert(script)
       return { ok: true, script, scripts: library.list() }
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : '无法保存' }
+      return { ok: false, error: error instanceof Error ? error.message : t('error.save') }
     }
   })
 
   ipcMain.handle('scripts:remove', async (_event, id: string) => {
     const script = library.get(id)
-    if (!script) return { ok: false, error: '找不到这个脚本' }
+    if (!script) return { ok: false, error: t('error.notFound') }
     const running = sessions.isRunning(id)
-    const kept = script.kind === 'python' ? '脚本文件还在原来的位置。' : ''
-    const runningNote = running ? '它正在运行，删除会先停止它。' : ''
     const { response } = await ask({
       type: 'warning',
-      buttons: ['删除', '取消'],
+      buttons: [t('dialog.delete'), t('dialog.cancel')],
       defaultId: 1,
       cancelId: 1,
-      message: `删除「${script.name}」？`,
-      detail: `${runningNote}终端里的历史记录会一起清掉。${kept}`
+      message: t('dialog.deleteAsk', { name: script.name }),
+      detail: joinPhrases([
+        running ? t('dialog.deleteRunning') : '',
+        t('dialog.deleteHistory'),
+        script.kind === 'python' ? t('dialog.deleteKept') : ''
+      ])
     })
     if (response !== 0) return { ok: false, cancelled: true }
     if (running) await sessions.stop(id)
@@ -149,22 +155,22 @@ function registerIpc(): void {
       sessions.start(id)
       return { ok: true }
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : '无法启动' }
+      return { ok: false, error: error instanceof Error ? error.message : t('error.start') }
     }
   })
 
   ipcMain.handle('scripts:stop', async (_event, id: string) => {
-    if (typeof id !== 'string') return { ok: false, error: '找不到这个脚本' }
+    if (typeof id !== 'string') return { ok: false, error: t('error.notFound') }
     const script = library.get(id)
-    if (!script) return { ok: false, error: '找不到这个脚本' }
+    if (!script) return { ok: false, error: t('error.notFound') }
     if (!sessions.isRunning(id)) return { ok: true }
     const { response } = await ask({
       type: 'question',
-      buttons: ['停止', '取消'],
+      buttons: [t('dialog.stop'), t('dialog.cancel')],
       defaultId: 1,
       cancelId: 1,
-      message: `停止「${script.name}」？`,
-      detail: '它会马上停下来。'
+      message: t('dialog.stopAsk', { name: script.name }),
+      detail: t('dialog.stopDetail')
     })
     if (response !== 0) return { ok: false, cancelled: true }
     await sessions.stop(id)
@@ -173,7 +179,7 @@ function registerIpc(): void {
 
   ipcMain.handle('scripts:reorder', (_event, ids: unknown) => {
     if (!Array.isArray(ids) || ids.some((id) => typeof id !== 'string')) {
-      return { ok: false, error: '顺序无法保存' }
+      return { ok: false, error: t('error.reorder') }
     }
     library.reorder(ids)
     return { ok: true, scripts: library.list() }
@@ -192,7 +198,7 @@ function registerIpc(): void {
       const normalized = trimmed ? normalizeVenvPath(expandHome(trimmed, os.homedir())) : null
       return { python: resolveInterpreter(normalized) }
     } catch (error) {
-      return { error: error instanceof Error ? error.message : '无法确定解释器' }
+      return { error: error instanceof Error ? error.message : t('error.interpreter') }
     }
   })
 
@@ -206,7 +212,7 @@ function registerIpc(): void {
 
   ipcMain.handle('dialog:pick-script', async (_event, defaultPath?: string) => {
     const result = await pick({
-      title: '选择 Python 文件',
+      title: t('dialog.pickPython'),
       defaultPath: existingPath(defaultPath),
       filters: [{ name: 'Python', extensions: ['py'] }],
       properties: ['openFile']
@@ -217,20 +223,20 @@ function registerIpc(): void {
 
   ipcMain.handle('scripts:read-source', (_event, id: string) => {
     const script = sourceScript(id)
-    if (!script) return { ok: false, error: '这个脚本没有可编辑的文件' }
+    if (!script) return { ok: false, error: t('error.noSource') }
     return readSource(script.scriptPath)
   })
 
   ipcMain.handle('scripts:write-source', (_event, id: string, text: string) => {
     const script = sourceScript(id)
-    if (!script) return { ok: false, error: '这个脚本没有可编辑的文件' }
-    if (typeof text !== 'string') return { ok: false, error: '无法保存' }
+    if (!script) return { ok: false, error: t('error.noSource') }
+    if (typeof text !== 'string') return { ok: false, error: t('error.save') }
     return writeSource(script.scriptPath, text)
   })
 
   ipcMain.handle('dialog:pick-dir', async (_event, defaultPath?: string) => {
     const result = await pick({
-      title: '选择文件夹',
+      title: t('dialog.pickFolder'),
       defaultPath: existingPath(defaultPath),
       properties: ['openDirectory']
     })
@@ -262,19 +268,19 @@ function sourceScript(id: string) {
 function readSource(file: string): { ok: true; text: string } | { ok: false; error: string } {
   try {
     const stat = fs.statSync(file)
-    if (!stat.isFile()) return { ok: false, error: '找不到这个 Python 文件' }
-    if (stat.size > MAX_SOURCE_BYTES) return { ok: false, error: '文件太大，请在外部编辑' }
+    if (!stat.isFile()) return { ok: false, error: t('error.notPython') }
+    if (stat.size > MAX_SOURCE_BYTES) return { ok: false, error: t('error.tooLarge') }
     return { ok: true, text: fs.readFileSync(file, 'utf8') }
   } catch {
-    return { ok: false, error: '无法读取这个 Python 文件' }
+    return { ok: false, error: t('error.readPython') }
   }
 }
 
 function writeSource(file: string, text: string): { ok: true; text: string } | { ok: false; error: string } {
-  if (Buffer.byteLength(text) > MAX_SOURCE_BYTES) return { ok: false, error: '文件太大，请在外部编辑' }
+  if (Buffer.byteLength(text) > MAX_SOURCE_BYTES) return { ok: false, error: t('error.tooLarge') }
   const tmp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.tmp`)
   try {
-    if (!fs.statSync(file).isFile()) return { ok: false, error: '找不到这个 Python 文件' }
+    if (!fs.statSync(file).isFile()) return { ok: false, error: t('error.notPython') }
     fs.writeFileSync(tmp, text, 'utf8')
     fs.renameSync(tmp, file)
     return { ok: true, text }
@@ -284,7 +290,7 @@ function writeSource(file: string, text: string): { ok: true; text: string } | {
     } catch {
       // The temporary file may already be gone.
     }
-    return { ok: false, error: '无法保存这个 Python 文件' }
+    return { ok: false, error: t('error.writePython') }
   }
 }
 
@@ -333,6 +339,52 @@ function setAppearance(theme: Appearance): void {
   setTimeout(installMenu, 0)
 }
 
+type LanguagePreferenceFile = { language?: string }
+
+function languageFile(): string {
+  return path.join(app.getPath('userData'), 'language.json')
+}
+
+function readLanguage(): LanguagePreference {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(languageFile(), 'utf8')) as LanguagePreferenceFile
+    if (parsed.language === 'zh-CN' || parsed.language === 'en' || parsed.language === 'system') return parsed.language
+  } catch {
+    // 没有记录时跟随系统。
+  }
+  return 'system'
+}
+
+function systemLocaleTag(): string {
+  try {
+    const preferred = app.getPreferredSystemLanguages()
+    if (preferred.length > 0) return preferred[0]
+  } catch {
+    // 读不到语言列表时用应用区域。
+  }
+  return app.getLocale()
+}
+
+let languagePreference: LanguagePreference = 'system'
+
+function notifyLocale(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  mainWindow.webContents.send('locale:changed', activeLocale())
+}
+
+function setLanguage(preference: LanguagePreference): void {
+  if (preference === languagePreference) return
+  languagePreference = preference
+  setActiveLocale(resolveLocale(preference, systemLocaleTag()))
+  try {
+    fs.writeFileSync(languageFile(), JSON.stringify({ language: preference }))
+  } catch {
+    // 这次选择仍然生效，只是下次打开会回到系统语言。
+  }
+  notifyLocale()
+  setTimeout(installMenu, 0)
+}
+
 function paintWindow(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return
   mainWindow.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#141311' : '#ebe6dc')
@@ -350,6 +402,15 @@ function appearanceItem(label: string, theme: Appearance): Electron.MenuItemCons
     type: 'radio',
     checked: nativeTheme.themeSource === theme,
     click: () => setAppearance(theme)
+  }
+}
+
+function languageItem(label: string, preference: LanguagePreference): Electron.MenuItemConstructorOptions {
+  return {
+    label,
+    type: 'radio',
+    checked: languagePreference === preference,
+    click: () => setLanguage(preference)
   }
 }
 
@@ -372,38 +433,42 @@ function installMenu(): void {
     {
       label: 'MollyRun',
       submenu: [
-        { role: 'about', label: '关于 MollyRun' },
+        { role: 'about', label: t('menu.about') },
         { type: 'separator' },
-        { role: 'hide', label: '隐藏 MollyRun' },
-        { role: 'hideOthers', label: '隐藏其他' },
-        { role: 'unhide', label: '显示全部' },
+        { role: 'hide', label: t('menu.hide') },
+        { role: 'hideOthers', label: t('menu.hideOthers') },
+        { role: 'unhide', label: t('menu.showAll') },
         { type: 'separator' },
-        { role: 'quit', label: '退出 MollyRun' }
+        { role: 'quit', label: t('menu.quit') }
       ]
     },
     {
-      label: '显示',
+      label: t('menu.view'),
       submenu: [
         {
-          label: '外观',
-          submenu: [appearanceItem('浅色', 'light'), appearanceItem('深色', 'dark'), appearanceItem('跟随系统', 'system')]
+          label: t('menu.appearance'),
+          submenu: [appearanceItem(t('menu.light'), 'light'), appearanceItem(t('menu.dark'), 'dark'), appearanceItem(t('menu.system'), 'system')]
         },
         {
-          label: '排列',
-          submenu: [layoutItem('标签', 'tabs'), layoutItem('平铺 3 个/行', 'tile3'), layoutItem('平铺 2 个/行', 'tile2')]
+          label: t('menu.layout'),
+          submenu: [layoutItem(t('menu.tabs'), 'tabs'), layoutItem(t('menu.tile3'), 'tile3'), layoutItem(t('menu.tile2'), 'tile2')]
+        },
+        {
+          label: t('menu.language'),
+          submenu: [languageItem(t('menu.zh'), 'zh-CN'), languageItem(t('menu.en'), 'en'), languageItem(t('menu.system'), 'system')]
         }
       ]
     },
     {
-      label: '编辑',
+      label: t('menu.edit'),
       submenu: [
-        { role: 'undo', label: '撤销' },
-        { role: 'redo', label: '重做' },
+        { role: 'undo', label: t('menu.undo') },
+        { role: 'redo', label: t('menu.redo') },
         { type: 'separator' },
-        { role: 'cut', label: '剪切' },
-        { role: 'copy', label: '拷贝' },
-        { role: 'paste', label: '粘贴' },
-        { role: 'selectAll', label: '全选' }
+        { role: 'cut', label: t('menu.cut') },
+        { role: 'copy', label: t('menu.copy') },
+        { role: 'paste', label: t('menu.paste') },
+        { role: 'selectAll', label: t('menu.selectAll') }
       ]
     }
   ]
@@ -428,6 +493,8 @@ if (gotLock) {
   })
 
   app.whenReady().then(() => {
+    languagePreference = readLanguage()
+    setActiveLocale(resolveLocale(languagePreference, systemLocaleTag()))
     library = new Library(path.join(app.getPath('userData'), 'scripts.json'))
     sessions = new Sessions({
       sendStatus,
@@ -445,7 +512,7 @@ if (gotLock) {
     if (icon) app.dock?.setIcon(icon)
     createWindow()
   }).catch((error: unknown) => {
-    dialog.showErrorBox('MollyRun', error instanceof Error ? error.message : '无法打开')
+    dialog.showErrorBox('MollyRun', error instanceof Error ? error.message : t('error.open'))
     quitting = true
     app.quit()
   })

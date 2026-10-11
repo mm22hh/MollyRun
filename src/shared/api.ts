@@ -1,3 +1,4 @@
+import type { AppLocale } from './i18n'
 import type { ScriptInput, ScriptRecord, ScriptStatus, TerminalChunk, TerminalSnapshot } from './model'
 
 export type SaveResult =
@@ -31,5 +32,6 @@ export type ScriptboardApi = {
   onStatus: (callback: (status: ScriptStatus) => void) => () => void
   onData: (callback: (chunk: TerminalChunk) => void) => () => void
   onLayout: (callback: (layout: StageLayout) => void) => () => void
+  onLocale: (callback: (locale: AppLocale) => void) => () => void
   reportLayout: (layout: StageLayout) => void
 }

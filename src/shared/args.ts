@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export function parseArgs(input: string): string[] {
   const args: string[] = []
   let current = ''
@@ -41,8 +43,8 @@ export function parseArgs(input: string): string[] {
     started = true
   }
 
-  if (escaping) throw new Error('参数以 \\ 结尾，转义没有完成')
-  if (quote) throw new Error('参数里的引号没有闭合')
+  if (escaping) throw new Error(t('error.escape'))
+  if (quote) throw new Error(t('error.quote'))
   if (started) push()
   return args
 }
@@ -62,6 +64,6 @@ export function argsError(input: string): string | null {
     parseArgs(input)
     return null
   } catch (error) {
-    return error instanceof Error ? error.message : '参数无法解析'
+    return error instanceof Error ? error.message : t('error.args')
   }
 }

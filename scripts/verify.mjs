@@ -22,6 +22,8 @@ if (venv.status !== 0) {
   process.exit(venv.status ?? 1)
 }
 
+writeFileSync(path.join(dataDir, 'language.json'), JSON.stringify({ language: 'zh-CN' }))
+
 writeFileSync(
   scriptPath,
   `import os, sys, time
@@ -243,7 +245,49 @@ try {
     const view = Menu.getApplicationMenu()?.items.find((item) => item.label === '显示')
     return view?.submenu?.items.map((item) => item.label) ?? []
   })
-  check('显示菜单收成外观和排列', displayItems.join(',') === '外观,排列', displayItems.join(','))
+  check('显示菜单收成外观、排列和语言', displayItems.join(',') === '外观,排列,语言', displayItems.join(','))
+  const menuLabels = () => app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.items.map((item) => item.label) ?? [])
+  const chooseLanguage = (label) => app.evaluate(({ Menu }, languageLabel) => {
+    for (const menu of Menu.getApplicationMenu()?.items ?? []) {
+      for (const item of menu.submenu?.items ?? []) {
+        const choice = item.submenu?.items.find((child) => child.label === languageLabel)
+        if (choice) {
+          choice.click()
+          return true
+        }
+      }
+    }
+    return false
+  }, label)
+  const waitForMenu = async (label) => {
+    const start = Date.now()
+    let labels = []
+    while (Date.now() - start < 3000) {
+      labels = await menuLabels()
+      if (labels.includes(label)) return labels
+      await new Promise((resolve) => setTimeout(resolve, 40))
+    }
+    return labels
+  }
+  check('点了英文', await chooseLanguage('English'))
+  await page.waitForFunction(() => document.documentElement.dataset.locale === 'en')
+  const englishView = await waitForMenu('View')
+  check('菜单可以切到英文', (await page.getByTestId('filter-all').innerText()) === 'All' && englishView.includes('View'), `${englishView.join(',')}`)
+  await page.getByTestId('add-script').click()
+  await page.getByRole('heading', { name: 'Add script' }).waitFor()
+  const venvLines = await page.getByTestId('mode-venv').evaluate((el) => {
+    const range = document.createRange()
+    range.selectNodeContents(el)
+    return range.getClientRects().length
+  })
+  check('英文表单里虚拟环境保持一行', venvLines === 1, String(venvLines))
+  await page.screenshot({ path: path.join(shots, '08-english-form.png') })
+  await page.getByTestId('close-form').click()
+  await page.getByRole('heading', { name: 'Add script' }).waitFor({ state: 'detached' })
+  check('点了简体中文', await chooseLanguage('简体中文'))
+  await page.waitForFunction(() => document.documentElement.dataset.locale === 'zh-CN')
+  const chineseView = await waitForMenu('显示')
+  check('菜单可以切回简体中文', (await page.getByTestId('filter-all').innerText()) === '全部' && chineseView.includes('显示'), chineseView.join(','))
   check('筛选字号保持较小', filterSize === '12px', filterSize)
   check('添加脚本字号与切换一致', addSize === '12px', addSize)
   const runningLines = await page.getByTestId('filter-running').evaluate((el) => {

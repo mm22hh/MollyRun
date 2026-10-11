@@ -2,6 +2,7 @@ import fs from 'fs'
 import os from 'os'
 import * as pty from 'node-pty'
 import path from 'path'
+import { activeLocale, t } from '../shared/i18n'
 import { envForRun, parseArgs, type ScriptRecord, type ScriptStatus, type TerminalChunk, type TerminalSnapshot } from '../shared/model'
 import { resolveInterpreter } from './python'
 
@@ -75,7 +76,7 @@ export class Sessions {
 
   start(id: string): void {
     const script = this.host.getScript(id)
-    if (!script) throw new Error('找不到这个脚本')
+    if (!script) throw new Error(t('error.notFound'))
     const existing = this.sessions.get(id)
     if (existing?.pty) return
 
@@ -83,7 +84,7 @@ export class Sessions {
     this.sessions.set(id, session)
 
     if (script.kind === 'command') {
-      if (session.log.text.length > 0) this.push(session, stamp('重新启动'))
+      if (session.log.text.length > 0) this.push(session, stamp(t('terminal.restarted')))
       this.push(session, commandLine(script.command))
       this.launch(session, commandShell(), ['-lc', script.command], os.homedir(), envForRun(globalThis.process.env, null, null), explainCommandSpawn)
       return
@@ -100,7 +101,7 @@ export class Sessions {
       return
     }
 
-    if (session.log.text.length > 0) this.push(session, stamp('重新启动'))
+    if (session.log.text.length > 0) this.push(session, stamp(t('terminal.restarted')))
 
     const binDir = script.venvPath ? path.dirname(python) : null
     this.launch(
@@ -159,7 +160,7 @@ export class Sessions {
       session.pty = null
       const stoppedByUser = session.stoppedByUser
       const code = typeof exitCode === 'number' ? exitCode : signal ? 128 + signal : 0
-      const label = stoppedByUser ? '已停止' : code === 0 ? '已退出' : `已退出，代码 ${code}`
+      const label = stoppedByUser ? t('terminal.stopped') : code === 0 ? t('terminal.exited') : t('terminal.exitedCode', { code })
       this.push(session, stamp(label))
       this.markExited(session, stoppedByUser ? null : code, stoppedByUser)
     })
@@ -258,28 +259,28 @@ function idleStatus(id: string): ScriptStatus {
 }
 
 function stamp(label: string): string {
-  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+  const time = new Date().toLocaleTimeString(activeLocale(), { hour12: false })
   return `\r\n\x1b[38;5;245m──── ${label} ${time} ────\x1b[0m\r\n`
 }
 
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : '无法启动'
+  return error instanceof Error ? error.message : t('error.start')
 }
 
 function explainSpawn(error: unknown): string {
   const message = messageOf(error)
   if (message.includes('ENOENT') || message.includes('posix_spawnp')) {
-    return '无法启动。请检查解释器和脚本路径是否还在。'
+    return t('error.spawnPython')
   }
-  return `无法启动：${message}`
+  return t('error.startDetail', { message })
 }
 
 function explainCommandSpawn(error: unknown): string {
   const message = messageOf(error)
   if (message.includes('ENOENT') || message.includes('posix_spawnp')) {
-    return '无法启动。请检查这条命令。'
+    return t('error.spawnCommand')
   }
-  return `无法启动：${message}`
+  return t('error.startDetail', { message })
 }
 
 function commandLine(command: string): string {

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { ScriptRecord, ScriptStatus } from '../../../shared/model'
 import { moveBeside, placeVisibleOrder } from '../../../shared/order'
+import { useT } from '../i18n'
 
 type Props = {
   scripts: ScriptRecord[]
@@ -26,6 +27,7 @@ type MenuState = { id: string; x: number; y: number }
 export type Scope = 'all' | 'running'
 
 export function Sidebar({ scripts, statuses, scope, onScope, selectedId, now, onOpen, onStart, onStop, onEdit, onDelete, onReorder, onCreate }: Props) {
+  const t = useT()
   const [dragId, setDragId] = useState<string | null>(null)
   const [previewIds, setPreviewIds] = useState<string[] | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
@@ -271,27 +273,27 @@ export function Sidebar({ scripts, statuses, scope, onScope, selectedId, now, on
       </div>
       <div className="segment list-filter">
         <button type="button" aria-pressed={scope === 'all'} data-testid="filter-all" onClick={() => onScope('all')}>
-          全部
+          {t('sidebar.all')}
         </button>
         <button type="button" aria-pressed={scope === 'running'} data-testid="filter-running" onClick={() => onScope('running')}>
-          运行中
+          {t('sidebar.running')}
         </button>
       </div>
       <div className="script-list">
         {scripts.length === 0 ? (
           <div className="sidebar-empty">
-            <p>还没有脚本</p>
-            <p>把一个 Python 文件或一条命令登记进来，就可以从这里启动。</p>
+            <p>{t('sidebar.emptyTitle')}</p>
+            <p>{t('sidebar.emptyBody')}</p>
           </div>
         ) : visible.length === 0 ? (
           <div className="sidebar-empty" data-testid="running-empty">
-            <p>没有正在运行的脚本</p>
+            <p>{t('sidebar.noneRunning')}</p>
           </div>
         ) : (
           visible.map((script) => {
             const status = statuses[script.id]
             const running = status?.state === 'running'
-            const meta = metaParts(script, status, now)
+            const meta = metaParts(script, status, now, t)
             const className = ['row', script.id === selectedId ? 'selected' : '', script.id === dragId ? 'dragging' : ''].filter(Boolean).join(' ')
             return (
               <div
@@ -316,11 +318,11 @@ export function Sidebar({ scripts, statuses, scope, onScope, selectedId, now, on
                 </button>
                 {running ? (
                   <button type="button" className="row-action stop" data-testid={`stop-${script.id}`} onClick={() => onStop(script.id)}>
-                    停止
+                    {t('sidebar.stop')}
                   </button>
                 ) : (
                   <button type="button" className="row-action" data-testid={`start-${script.id}`} onClick={() => onStart(script.id)}>
-                    启动
+                    {t('sidebar.start')}
                   </button>
                 )}
               </div>
@@ -329,13 +331,13 @@ export function Sidebar({ scripts, statuses, scope, onScope, selectedId, now, on
         )}
       </div>
       <button type="button" className="add-script" data-testid="add-script" onClick={onCreate}>
-        添加脚本
+        {t('sidebar.add')}
       </button>
       <div
         className="sidebar-resizer"
         role="separator"
         aria-orientation="vertical"
-        aria-label="调整列表宽度"
+        aria-label={t('sidebar.resize')}
         aria-valuemin={MIN_SIDEBAR_WIDTH}
         aria-valuenow={width}
         aria-valuemax={maxSidebarWidth()}
@@ -352,10 +354,10 @@ export function Sidebar({ scripts, statuses, scope, onScope, selectedId, now, on
           style={{ top: menu.y, left: menu.x }}
         >
           <button type="button" role="menuitem" data-testid="menu-edit" onClick={() => openMenu(menuScript)}>
-            编辑
+            {t('sidebar.edit')}
           </button>
           <button type="button" role="menuitem" className="danger" data-testid="menu-delete" onClick={deleteFromMenu}>
-            删除
+            {t('sidebar.delete')}
           </button>
         </div>
       ) : null}
@@ -389,11 +391,16 @@ function metaClass(status: ScriptStatus | undefined): string {
   return 'row-meta'
 }
 
-function metaParts(script: ScriptRecord, status: ScriptStatus | undefined, now: number): { file: string; detail: string } {
+function metaParts(
+  script: ScriptRecord,
+  status: ScriptStatus | undefined,
+  now: number,
+  t: ReturnType<typeof useT>
+): { file: string; detail: string } {
   const file = script.kind === 'command' ? script.command : baseName(script.scriptPath)
   if (status?.state === 'running' && status.startedAt) return { file, detail: formatDuration(now - status.startedAt) }
-  if (status?.state === 'exited' && status.stoppedByUser) return { file, detail: '已停止' }
-  if (status?.state === 'exited') return { file, detail: `退出 ${status.exitCode ?? 0}` }
+  if (status?.state === 'exited' && status.stoppedByUser) return { file, detail: t('sidebar.stopped') }
+  if (status?.state === 'exited') return { file, detail: t('sidebar.exitCode', { code: status.exitCode ?? 0 }) }
   if (script.venvPath) return { file, detail: baseName(script.venvPath) }
   return { file, detail: '' }
 }

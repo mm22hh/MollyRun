@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import path from 'path'
 import { test } from 'node:test'
+import { resolveLocale, translate } from './i18n'
 import {
   envForRun,
   expandHome,
@@ -135,6 +136,21 @@ test('moveBeside inserts on the pointer side and stays put on the near edge', ()
   assert.deepEqual(moveBeside(['a', 'b', 'c'], 'a', 'c', false), ['b', 'a', 'c'])
   const same = ['a', 'b', 'c']
   assert.equal(moveBeside(same, 'a', 'b', false), same)
+})
+
+test('system language maps Chinese tags to simplified Chinese', () => {
+  assert.equal(resolveLocale('system', 'zh-CN'), 'zh-CN')
+  assert.equal(resolveLocale('system', 'zh-Hans-CN'), 'zh-CN')
+  assert.equal(resolveLocale('system', 'zh_TW'), 'zh-CN')
+  assert.equal(resolveLocale('system', 'en-US'), 'en')
+  assert.equal(resolveLocale('en', 'zh-CN'), 'en')
+  assert.equal(resolveLocale('zh-CN', 'en-US'), 'zh-CN')
+})
+
+test('translate fills placeholders for the active catalog', () => {
+  assert.equal(translate('zh-CN', 'dialog.quitRunningMany', { count: 2 }), '还有 2 个脚本在运行')
+  assert.equal(translate('en', 'dialog.quitRunningOne'), '1 script is still running')
+  assert.equal(translate('en', 'sidebar.exitCode', { code: 0 }), 'Exit 0')
 })
 
 test('placeVisibleOrder keeps hidden ids and applies the visible order', () => {

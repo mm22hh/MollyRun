@@ -11,8 +11,24 @@ function themeArg(): boolean {
   return process.argv.includes('--scriptboard-theme=dark')
 }
 
+function localeArg(): 'zh-CN' | 'en' {
+  const arg = process.argv.find((item) => item.startsWith('--scriptboard-locale='))
+  return arg?.endsWith('=en') ? 'en' : 'zh-CN'
+}
+
+function applyLocale(locale: 'zh-CN' | 'en'): void {
+  const root = document.documentElement
+  if (!root) return
+  root.lang = locale
+  root.dataset.locale = locale
+}
+
 applyAppearance(themeArg())
-window.addEventListener('DOMContentLoaded', () => applyAppearance(themeArg()))
+applyLocale(localeArg())
+window.addEventListener('DOMContentLoaded', () => {
+  applyAppearance(themeArg())
+  applyLocale(localeArg())
+})
 ipcRenderer.on('appearance:changed', (_event, dark: boolean) => {
   applyAppearance(dark === true)
 })
@@ -36,6 +52,7 @@ const api: ScriptboardApi = {
   onStatus: (callback) => subscribe('scripts:status', callback),
   onData: (callback) => subscribe('terminal:data', callback),
   onLayout: (callback) => subscribe('layout:set', callback),
+  onLocale: (callback) => subscribe('locale:changed', callback),
   reportLayout: (layout) => ipcRenderer.send('layout:report', layout)
 }
 

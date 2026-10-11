@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal } from '@xterm/xterm'
 import type { ScriptStatus, TerminalChunk } from '../../../shared/model'
+import { useT } from '../i18n'
 import '@xterm/xterm/css/xterm.css'
 
 type Props = {
@@ -62,6 +63,7 @@ const LIGHT_THEME = {
 }
 
 export function TerminalPane({ scriptId, active, status, onStop }: Props) {
+  const t = useT()
   const hostRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const clearRef = useRef<() => Promise<void>>(async () => {})
@@ -241,8 +243,8 @@ export function TerminalPane({ scriptId, active, status, onStop }: Props) {
       <div className="terminal-host" ref={hostRef} />
       {showHint ? (
         <div className="terminal-hint">
-          <strong>还没运行</strong>
-          <span>启动之后，输出会留在这里。</span>
+          <strong>{t('term.idle')}</strong>
+          <span>{t('term.idleHint')}</span>
         </div>
       ) : null}
       {menu ? (
@@ -264,7 +266,7 @@ export function TerminalPane({ scriptId, active, status, onStop }: Props) {
                 onStop(scriptId)
               }}
             >
-              停止
+              {t('term.stop')}
             </button>
           ) : null}
           <button
@@ -277,7 +279,7 @@ export function TerminalPane({ scriptId, active, status, onStop }: Props) {
               void clearRef.current()
             }}
           >
-            清空历史记录
+            {t('term.clear')}
           </button>
         </div>
       ) : null}

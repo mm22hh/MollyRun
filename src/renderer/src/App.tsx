@@ -5,8 +5,10 @@ import type { ScriptRecord, ScriptStatus } from '../../shared/model'
 import { ScriptForm } from './components/ScriptForm'
 import { Sidebar, type Scope } from './components/Sidebar'
 import { TerminalPane } from './components/TerminalPane'
+import { useT } from './i18n'
 
 export function App() {
+  const t = useT()
   const [scripts, setScripts] = useState<ScriptRecord[]>([])
   const [statuses, setStatuses] = useState<Record<string, ScriptStatus>>({})
   const [openTabs, setOpenTabs] = useState<string[]>([])
@@ -38,7 +40,7 @@ export function App() {
       },
       (error: unknown) => {
         if (!alive) return
-        setLoadError(error instanceof Error ? error.message : '无法读取脚本列表')
+        setLoadError(error instanceof Error ? error.message : t('error.list'))
       }
     )
     return () => {
@@ -172,7 +174,7 @@ export function App() {
                       <button
                         type="button"
                         className="tab-close"
-                        aria-label={`关闭 ${script.name} 的标签`}
+                        aria-label={t('stage.closeTab', { name: script.name })}
                         data-testid={`tab-close-${script.id}`}
                         onClick={() => closeTab(script.id)}
                       >
@@ -192,13 +194,13 @@ export function App() {
           <div className="stage-empty" data-testid="empty-stage">
             {scope === 'running' ? (
               <>
-                <strong>没有正在运行的脚本</strong>
-                <span>启动之后，终端会回到这里。</span>
+                <strong>{t('stage.noneRunning')}</strong>
+                <span>{t('stage.noneRunningHint')}</span>
               </>
             ) : (
               <>
-                <strong>终端会显示在这里</strong>
-                <span>从左侧选一个脚本，或直接启动它。</span>
+                <strong>{t('stage.empty')}</strong>
+                <span>{t('stage.emptyHint')}</span>
               </>
             )}
           </div>
@@ -226,7 +228,7 @@ export function App() {
                     <button
                       type="button"
                       className="tab-close"
-                      aria-label={`关闭 ${script.name}`}
+                      aria-label={t('stage.close', { name: script.name })}
                       data-testid={`tile-close-${script.id}`}
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => closeTab(script.id)}

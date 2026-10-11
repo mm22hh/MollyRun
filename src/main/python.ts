@@ -2,6 +2,7 @@ import { execFileSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { t } from '../shared/i18n'
 import {
   argsError,
   normalizeInput,
@@ -21,7 +22,7 @@ export function lookupSystemPython(): string {
     if (!found) throw new Error('找不到')
     return found
   } catch {
-    throw new Error('找不到系统的 python3')
+    throw new Error(t('error.noSystemPython'))
   }
 }
 
@@ -40,7 +41,7 @@ export function findVenvPython(venvPath: string): string | null {
 export function resolveInterpreter(venvPath: string | null): string {
   if (!venvPath) return lookupSystemPython()
   const python = findVenvPython(venvPath)
-  if (!python) throw new Error('这个虚拟环境里没有 Python（需要 bin/python）')
+  if (!python) throw new Error(t('error.noVenvPython'))
   return python
 }
 
@@ -53,22 +54,22 @@ export function prepareScript(input: ScriptInput, id: string): ScriptRecord {
 }
 
 export function validateScript(script: ScriptRecord): string | null {
-  if (!script.name) return '请填写名称'
-  if (script.name.length > 80) return '名称太长了'
+  if (!script.name) return t('error.needName')
+  if (script.name.length > 80) return t('error.nameLong')
   if (script.kind === 'command') {
-    if (!script.command) return '请填写命令'
-    if (script.command.length > 4000) return '命令太长了'
+    if (!script.command) return t('error.needCommand')
+    if (script.command.length > 4000) return t('error.commandLong')
     return null
   }
   const parsed = argsError(script.args)
   if (parsed) return parsed
-  if (!script.scriptPath) return '请选择 Python 文件'
-  if (!script.scriptPath.toLowerCase().endsWith('.py')) return '请选择 .py 文件'
-  if (!path.isAbsolute(script.scriptPath)) return '脚本请使用完整路径'
-  if (!isFile(script.scriptPath)) return '找不到这个 Python 文件'
+  if (!script.scriptPath) return t('error.needPython')
+  if (!script.scriptPath.toLowerCase().endsWith('.py')) return t('error.needPy')
+  if (!path.isAbsolute(script.scriptPath)) return t('error.absScript')
+  if (!isFile(script.scriptPath)) return t('error.notPython')
   if (script.venvPath) {
-    if (!path.isAbsolute(script.venvPath)) return '虚拟环境请使用完整路径'
-    if (!findVenvPython(script.venvPath)) return '这个虚拟环境里没有 Python（需要 bin/python）'
+    if (!path.isAbsolute(script.venvPath)) return t('error.absVenv')
+    if (!findVenvPython(script.venvPath)) return t('error.noVenvPython')
   }
   return null
 }

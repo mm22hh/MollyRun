@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { formatCommand, parseArgs } from '../../../shared/args'
 import type { ScriptKind, ScriptRecord } from '../../../shared/model'
+import { useT } from '../i18n'
 
 type Props = {
   initial: ScriptRecord | null
@@ -12,6 +13,7 @@ type Props = {
 type Mode = 'system' | 'venv'
 
 export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
+  const t = useT()
   const [kind, setKind] = useState<ScriptKind>(initial?.kind === 'command' ? 'command' : 'python')
   const [name, setName] = useState(initial?.name ?? '')
   const [scriptPath, setScriptPath] = useState(initial?.scriptPath ?? '')
@@ -67,22 +69,22 @@ export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
   const preview = useMemo(() => {
     if (kind === 'command') {
       const text = command.trim()
-      return { text: text || '填写命令后，这里会显示将要执行的内容', error: null }
+      return { text: text || t('form.commandEmpty'), error: null }
     }
     try {
       const parsed = parseArgs(args)
       if (!scriptPath.trim()) {
-        return { text: '选择 Python 文件后，这里会显示完整命令', error: pythonError }
+        return { text: t('form.pythonEmpty'), error: pythonError }
       }
       if (!python) {
-        return { text: '正在确认解释器…', error: pythonError }
+        return { text: t('form.resolving'), error: pythonError }
       }
       return { text: formatCommand([python, scriptPath.trim(), ...parsed]), error: pythonError }
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : '参数无法解析'
+      const message = caught instanceof Error ? caught.message : t('error.args')
       return { text: '', error: message }
     }
-  }, [args, command, kind, python, pythonError, scriptPath])
+  }, [args, command, kind, python, pythonError, scriptPath, t])
 
   async function chooseScript() {
     const picked = await window.scriptboard.pickScript(scriptPath || undefined)
@@ -133,35 +135,35 @@ export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
     <div className="backdrop">
       <form className="sheet" onSubmit={onSubmit}>
         <div className="sheet-head">
-          <h2>{initial ? '编辑脚本' : '添加脚本'}</h2>
-          <button type="button" className="sheet-close" aria-label="关闭" data-testid="close-form" onClick={onClose}>
+          <h2>{initial ? t('form.edit') : t('form.add')}</h2>
+          <button type="button" className="sheet-close" aria-label={t('form.close')} data-testid="close-form" onClick={onClose}>
             ×
           </button>
         </div>
         <div className="sheet-body">
         <div className="field">
-          <span>类型</span>
+          <span>{t('form.kind')}</span>
           <div className="segment">
             <button type="button" aria-pressed={kind === 'python'} data-testid="kind-python" onClick={() => setKind('python')}>
-              Python 文件
+              {t('form.python')}
             </button>
             <button type="button" aria-pressed={kind === 'command'} data-testid="kind-command" onClick={() => setKind('command')}>
-              命令
+              {t('form.command')}
             </button>
           </div>
         </div>
         <label>
-          名称
+          {t('form.name')}
           <input data-testid="field-name" autoFocus value={name} onChange={(event) => setName(event.target.value)} spellCheck={false} />
         </label>
         {kind === 'command' ? (
           <label>
-            命令
+            {t('form.command')}
             <textarea
               data-testid="field-command"
               value={command}
               onChange={(event) => setCommand(event.target.value)}
-              placeholder={'可粘贴多行脚本，写法与终端相同\nnpm run dev'}
+              placeholder={t('form.commandPlaceholder')}
               spellCheck={false}
               rows={6}
             />
@@ -170,7 +172,7 @@ export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
         {kind === 'python' ? (
         <>
         <label>
-          Python 文件
+          {t('form.python')}
           <span className="path-row">
             <input
               data-testid="field-script"
@@ -180,24 +182,24 @@ export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
               spellCheck={false}
             />
             <button type="button" onClick={() => void chooseScript()}>
-              选择
+              {t('form.choose')}
             </button>
           </span>
         </label>
         <div className="field">
-          <span>解释器</span>
+          <span>{t('form.interpreter')}</span>
           <div className="segment">
             <button type="button" aria-pressed={mode === 'system'} data-testid="mode-system" onClick={() => setMode('system')}>
-              系统 Python
+              {t('form.systemPython')}
             </button>
             <button type="button" aria-pressed={mode === 'venv'} data-testid="mode-venv" onClick={() => setMode('venv')}>
-              虚拟环境
+              {t('form.venv')}
             </button>
           </div>
         </div>
         {mode === 'venv' ? (
           <label>
-            虚拟环境
+            {t('form.venv')}
             <span className="path-row">
               <input
                 data-testid="field-venv"
@@ -207,25 +209,25 @@ export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
                 spellCheck={false}
               />
               <button type="button" onClick={() => void chooseVenv()}>
-                选择
+                {t('form.choose')}
               </button>
             </span>
           </label>
         ) : null}
         <label>
-          参数
+          {t('form.args')}
           <input
             data-testid="field-args"
             value={args}
             onChange={(event) => setArgs(event.target.value)}
-            placeholder='--epochs 10 或 --name "hello world"'
+            placeholder={t('form.argsPlaceholder')}
             spellCheck={false}
           />
         </label>
         </>
         ) : null}
         <div className="field">
-          <span>将要执行</span>
+          <span>{t('form.willRun')}</span>
           <div className="preview" data-testid="command-preview">
             {preview.text || ' '}
           </div>
@@ -238,14 +240,14 @@ export function ScriptForm({ initial, onClose, onSaved, onDeleted }: Props) {
         <div className="form-actions">
           {initial ? (
             <button type="button" className="danger-text" onClick={() => void onDelete()}>
-              删除
+              {t('form.delete')}
             </button>
           ) : null}
           <button type="button" onClick={onClose}>
-            取消
+            {t('form.cancel')}
           </button>
           <button type="submit" className="primary" data-testid="save-script" disabled={saving}>
-            保存
+            {t('form.save')}
           </button>
         </div>
         </div>

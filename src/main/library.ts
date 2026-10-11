@@ -1,4 +1,5 @@
 import fs from 'fs'
+import { t } from '../shared/i18n'
 import path from 'path'
 import type { ScriptRecord } from '../shared/model'
 
@@ -61,10 +62,10 @@ function readScripts(file: string): ScriptRecord[] {
   try {
     parsed = JSON.parse(raw)
   } catch {
-    throw new Error('scripts.json 无法解析，已停止启动以免覆盖原来的登记。')
+    throw new Error(t('error.jsonParse'))
   }
   if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as { scripts?: unknown }).scripts)) {
-    throw new Error('scripts.json 格式不对，已停止启动以免覆盖原来的登记。')
+    throw new Error(t('error.jsonShape'))
   }
   const scripts = (parsed as { scripts: unknown[] }).scripts
   return scripts.flatMap((value) => {
