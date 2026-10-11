@@ -1,6 +1,6 @@
 # MollyRun
 
-<img src="build/icon.png" alt="MollyRun icon" width="96">
+<img src="build/readme-icon.png" alt="MollyRun icon" width="96">
 
 Run local Python scripts and shell commands from one Mac window. The files stay in your projects. MollyRun keeps a list, starts and stops them, and shows the output.
 
